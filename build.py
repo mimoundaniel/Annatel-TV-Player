@@ -50,6 +50,13 @@ def addon_xml_body(addon_xml):
         return re.sub(r'<\?xml[^>]*\?>', '', f.read()).strip()
 
 
+def write_index(folder, links):
+    with open(os.path.join(folder, 'index.html'), 'w', encoding='utf-8', newline='\n') as f:
+        f.write('<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>Annatel TV pour Kodi</title></head><body>\n')
+        f.writelines(f'<a href="{link}">{link}</a><br>\n' for link in links)
+        f.write('</body></html>\n')
+
+
 def main():
     if os.path.exists(DOCS):
         shutil.rmtree(DOCS)
@@ -66,12 +73,11 @@ def main():
     with open(os.path.join(DOCS, 'addons.xml.md5'), 'w') as f:
         f.write(hashlib.md5(addons_xml.encode('utf-8')).hexdigest())
 
-    # Kodi's file manager lists an http source from the links on its index page
-    links = [os.path.relpath(p, DOCS).replace(os.sep, '/') for p in (repo_zip, addon_zip)]
-    with open(os.path.join(DOCS, 'index.html'), 'w', encoding='utf-8', newline='\n') as f:
-        f.write('<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>Annatel TV pour Kodi</title></head><body>\n')
-        f.writelines(f'<a href="{link}">{os.path.basename(link)}</a><br>\n' for link in links)
-        f.write('</body></html>\n')
+    # Kodi's file manager lists an http source from the links on its index page,
+    # and only keeps links whose text matches their target: one page per folder
+    write_index(DOCS, [REPO_ID + '/', ADDON_ID + '/'])
+    for zip_path in (repo_zip, addon_zip):
+        write_index(os.path.dirname(zip_path), [os.path.basename(zip_path)])
     open(os.path.join(DOCS, '.nojekyll'), 'w').close()
 
 
