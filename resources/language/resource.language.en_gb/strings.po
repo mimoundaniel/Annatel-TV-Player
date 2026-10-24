@@ -1,0 +1,21 @@
+# Kodi Media Center language file
+# Addon Name: Annatel TV
+# Addon id: plugin.video.annatel.tv
+# Addon Provider: Daniel Mimoun
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+
+msgctxt "#30021"
+msgid "Account"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Username"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Password"
+msgstr ""
