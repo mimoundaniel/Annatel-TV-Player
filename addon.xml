@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.annatel.tv" name="Annatel TV" version="1.0.3" provider-name="Daniel Mimoun">
+<addon id="plugin.video.annatel.tv" name="Annatel TV" version="1.1.0" provider-name="Daniel Mimoun">
 	<requires>
 		<import addon="xbmc.python" version="3.0.0" />
 		<import addon="script.module.requests" />
@@ -7,13 +7,22 @@
 		<!-- Pour le DEBUG, décommentez la ligne ci-dessous -->
 		<!-- <import addon="script.module.pydevd" version="4.4.0"/> -->
 	</requires>
-	
+
 	<extension point="xbmc.service" library="addon.py" start="startup" />
-	
+
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
-		<summary>Annatel TV</summary>
-		<description>Annatel TV</description>
+		<summary lang="fr_FR">Les chaînes Annatel TV dans Kodi</summary>
+		<summary lang="en_GB">Annatel TV channels in Kodi</summary>
+		<description lang="fr_FR">Ajoute les chaînes et le guide TV de votre abonnement Annatel.tv dans la section TV de Kodi, via PVR IPTV Simple Client.</description>
+		<description lang="en_GB">Adds the channels and TV guide of your Annatel.tv subscription to Kodi's TV section, through PVR IPTV Simple Client.</description>
+		<source>https://github.com/mimoundaniel/Annatel-TV-Player</source>
+		<news>v1.1.0
+- Le nom du dossier dans le zip correspond à l'identifiant de l'extension (l'installation depuis un zip fonctionne)
+- Les identifiants sont pris en compte sans redémarrer Kodi
+- Guide TV : caractères spéciaux corrigés, chaînes associées correctement, programme du lendemain inclus
+- Plus de blocage quand le serveur Annatel ne répond pas
+- Moins de notifications</news>
 		<assets>
 			<icon>icon.jpeg</icon>
 			<fanart>fanart.jpeg</fanart>

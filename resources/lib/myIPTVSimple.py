@@ -5,6 +5,7 @@ import xbmcvfs
 import os
 import resources.lib.common as common
 import xml.etree.ElementTree as ET
+import json
 
 __AddonID__ = 'plugin.video.annatel.tv'
 __Addon__ = xbmcaddon.Addon(__AddonID__)
@@ -14,18 +15,24 @@ __AddonDataPath__ = os.path.join(xbmcvfs.translatePath("special://userdata/addon
 if not os.path.exists(__AddonDataPath__):
     os.makedirs(__AddonDataPath__)
 
+def EnableIptvAddon():
+    request = {"jsonrpc": "2.0", "id": 1, "method": "Addons.SetAddonEnabled",
+               "params": {"addonid": "pvr.iptvsimple", "enabled": True}}
+    xbmc.executeJSONRPC(json.dumps(request))
+
+
 def GetIptvAddon(show_message=False):
     iptvAddon = None
 
     try:
+        # xbmcaddon.Addon fails while the add-on is disabled
+        if not xbmc.getCondVisibility("System.AddonIsEnabled(pvr.iptvsimple)"):
+            EnableIptvAddon()
         iptvAddon = xbmcaddon.Addon("pvr.iptvsimple")
-        if not iptvAddon.getSettingBool("enabled"):
-            iptvAddon.setSettingBool("enabled", True)
-            xbmc.executebuiltin('UpdateLocalAddons')
     except Exception as e:
         if show_message:
-            msg1 = "PVR IPTVSimple is not installed or disabled."
-            msg2 = "Please install or enable the IPTVSimple add-on."
+            msg1 = "PVR IPTV Simple Client n'est pas installé ou est désactivé."
+            msg2 = "Installez-le depuis Extensions > Installer depuis un dépôt > Clients PVR."
             common.OKmsg(msg1, msg2)
         xbmc.log("Error loading IPTVSimple addon: " + str(e), level=xbmc.LOGERROR)
 
@@ -36,7 +43,7 @@ def RefreshIPTVlinks(channel_list):
     if iptvAddon is None:
         return False
 
-    common.ShowNotification("Updating IPTV links...", 300000, addon=__Addon__)
+    xbmc.log("Updating IPTV links...", level=xbmc.LOGINFO)
 
     try:
         finalM3Ulist = MakeM3U(channel_list)
@@ -50,11 +57,11 @@ def RefreshIPTVlinks(channel_list):
             UpdateIPTVSimpleSettings(iptvAddon, restart_pvr=False)
     except Exception as e:
         traceback.print_exc()
-        common.ShowNotification(f"Error: {e}", 5000, addon=__Addon__)
+        common.ShowNotification(f"Erreur : {e}", 5000)
         xbmc.log("Error updating IPTV links: " + str(e), xbmc.LOGERROR)
         return False
 
-    common.ShowNotification("IPTV update complete.", 2000, addon=__Addon__)
+    xbmc.log("IPTV update complete.", level=xbmc.LOGINFO)
     return True
 
 def MakeM3U(channel_list, is_logo_extension=True):
@@ -84,9 +91,9 @@ def UpdateIPTVSimpleSettings(iptvAddon=None, restart_pvr=False):
 
     try:
         tree = ReadSettings(iptvSettingsFile)
-    except FileNotFoundError:
+    except (FileNotFoundError, OSError):
         xbmc.log("Settings file not found, creating new settings file.", level=xbmc.LOGWARNING)
-        tree = ET.ElementTree(ET.Element("settings"))
+        tree = ET.ElementTree(ET.Element("settings", version="2"))
 
     newSettings = {
         "epgPathType": "0",
@@ -110,18 +117,25 @@ def ReadSettings(source):
         tree = ET.parse(source)
     except ET.ParseError as e:
         xbmc.log("Error parsing settings file: " + str(e), level=xbmc.LOGERROR)
-        tree = ET.ElementTree(ET.Element("settings"))
+        tree = ET.ElementTree(ET.Element("settings", version="2"))
     return tree
 
 def ReplaceSetting(newSettings, tree, path):
+    """Kodi stores add-on settings in the version 2 format: <setting id="key">value</setting>"""
     root = tree.getroot()
+    if root.get("version") is None:
+        root.set("version", "2")
     for key, value in newSettings.items():
         setting = root.find(f".//setting[@id='{key}']")
-        if setting is not None:
-            setting.set('value', value)
-        else:
-            ET.SubElement(root, "setting", id=key, value=value)
-    tree.write(path)
+        if setting is None:
+            setting = ET.SubElement(root, "setting", id=key)
+        setting.text = value
+        setting.attrib.pop('value', None)
+        setting.attrib.pop('default', None)
+    local_dir = os.path.dirname(path)
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+    tree.write(path, encoding="utf-8", xml_declaration=True)
 
 def replaceEpgFile(epg_data):
     finalEpgFile = os.path.join(__AddonDataPath__, 'epg.xml')

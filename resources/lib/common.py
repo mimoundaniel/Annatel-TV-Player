@@ -3,12 +3,8 @@ import xbmcvfs
 import xbmcgui
 import xbmc
 import xbmcaddon
-import random
 import codecs
 import requests
-from datetime import datetime, timedelta
-from urllib.request import urlopen
-from urllib.error import URLError, HTTPError
 
 __AddonID__ = 'plugin.video.annatel.tv'
 __Addon__ = xbmcaddon.Addon(id=__AddonID__)
@@ -16,10 +12,9 @@ __AddonPath__ = xbmcvfs.translatePath(__Addon__.getAddonInfo('path'))
 __AddonDataPath__ = os.path.join(xbmcvfs.translatePath(
     "special://userdata/addon_data"), __AddonID__)
 __DefaultTitle__ = __Addon__.getAddonInfo('name')
+__AddonIcon__ = __Addon__.getAddonInfo('icon')
 __TempPath__ = os.path.join(__AddonDataPath__, "temp")
-
-
-random.seed()
+RequestTimeout = 20  # seconds
 
 
 def CleanTempFolder():
@@ -31,40 +26,47 @@ def CleanTempFolder():
 
 
 def OpenSettings():
-    __Addon__.openSettings(__AddonID__)
+    __Addon__.openSettings()
 
 
 def ShowNotification(msg, duration, title=__DefaultTitle__, addon=None, sound=False):
-    icon = None
-    if (addon is not None):
-        icon = addon.getAddonInfo('icon')
+    """duration is in milliseconds"""
+    icon = addon.getAddonInfo('icon') if addon is not None else __AddonIcon__
     dlg = xbmcgui.Dialog()
     dlg.notification(title, msg, icon, duration, sound)
 
 
 def YesNoDialog(message,  heading=__DefaultTitle__, nolabel=None, yeslabel=None):
     dlg = xbmcgui.Dialog()
-    response = dlg.yesno(heading, message, nolabel, yeslabel)
+    response = dlg.yesno(heading, message, nolabel or "", yeslabel or "")
     return response
 
 
+def OKmsg(line1, line2="", heading=__DefaultTitle__):
+    dlg = xbmcgui.Dialog()
+    dlg.ok(heading, f"{line1}\n{line2}".strip())
+
+
 def DownloadFile(url, filePath):
-    response = requests.get(url)
+    """Returns True when the file was downloaded"""
+    try:
+        response = requests.get(url, timeout=RequestTimeout)
+    except requests.RequestException as e:
+        xbmc.log(f'Failed to download {url}: {e}', level=xbmc.LOGERROR)
+        return False
 
-    # Create directory if it does not exist
+    if response.status_code != 200:
+        xbmc.log(
+            f'Failed to download image. Status code: {response.status_code} link:{url}', level=xbmc.LOGERROR)
+        return False
+
     directory = os.path.dirname(filePath)
-
     if not os.path.exists(directory):
         os.makedirs(directory)
-        print(f"Directory structure created successfully! {directory}")
 
-    if response.status_code == 200:
-        # Open a file for writing and write the response content to it
-        with open(filePath, 'wb+') as f:
-            f.write(response.content)
-    else:
-        xbmc.log(
-            f'Failed to download image. Status code: {response.status_code} link:{filePath}', level=xbmc.LOGERROR)
+    with open(filePath, 'wb+') as f:
+        f.write(response.content)
+    return True
 
 
 def ReadFile(file_path):
